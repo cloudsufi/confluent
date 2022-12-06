@@ -279,7 +279,7 @@ public class ConfluentStreamingSinkTest extends ConfluentStreamingTestBase {
     throws Exception {
     List<ConsumerRecord<K, V>> result = new ArrayList<>();
     Stopwatch stopwatch = new Stopwatch();
-    while (result.size() < expectedMessages && stopwatch.elapsed(TimeUnit.SECONDS) < 10) {
+    while (result.size() < expectedMessages && stopwatch.elapsedTime(TimeUnit.SECONDS) < 10) {
       ConsumerRecords<K, V> records = consumer.poll(Duration.ofMillis(100));
       for (ConsumerRecord<K, V> record : records) {
         result.add(record);

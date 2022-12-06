@@ -48,6 +48,7 @@ import org.apache.spark.api.java.function.Function;
 import org.apache.spark.api.java.function.Function2;
 import org.apache.spark.streaming.Time;
 import org.apache.spark.streaming.api.java.JavaDStream;
+import org.apache.spark.streaming.api.java.JavaInputDStream;
 import org.apache.spark.streaming.kafka010.ConsumerStrategies;
 import org.apache.spark.streaming.kafka010.KafkaUtils;
 import org.apache.spark.streaming.kafka010.LocationStrategies;
@@ -64,6 +65,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 
 /**
@@ -81,41 +83,36 @@ final class ConfluentStreamingSourceUtil {
 
   /**
    * Returns {@link JavaDStream} for {@link ConfluentStreamingSource}.
-   *  @param context   streaming context
-   * @param conf      kafka conf
+   *
+   * @param context      streaming context
+   * @param conf         kafka conf
    * @param outputSchema source output schema
-   * @param collector failure collector
+   * @param collector    failure collector
    */
-  static JavaDStream<StructuredRecord> getStructuredRecordJavaDStream(
-    StreamingContext context, ConfluentStreamingSourceConfig conf, Schema outputSchema, FailureCollector collector) {
+  static <K, V> JavaInputDStream<ConsumerRecord<K, V>> getConsumerRecordJavaDStream(
+    StreamingContext context, ConfluentStreamingSourceConfig conf, Schema outputSchema, FailureCollector collector,
+    Supplier<Map<TopicPartition, Long>> stateSupplier) {
     String pipelineName = context.getPipelineName();
     Map<String, Object> kafkaParams = getConsumerParams(conf, pipelineName);
     Properties properties = new Properties();
     properties.putAll(kafkaParams);
     try (Consumer<byte[], byte[]> consumer = new KafkaConsumer<>(properties, new ByteArrayDeserializer(),
                                                                  new ByteArrayDeserializer())) {
-      Map<TopicPartition, Long> offsets = getOffsets(conf, collector, consumer);
+      Map<TopicPartition, Long> offsets = getOffsets(conf, collector, consumer, stateSupplier);
       LOG.info("Using initial offsets {}", offsets);
 
-      if (conf.getSchemaRegistryUrl() != null) {
-        AvroRecordTransform transform = new AvroRecordTransform(conf, outputSchema);
-        return createKafkaDirectStream(context, conf, kafkaParams, offsets, transform);
-      }
-      return createKafkaDirectStream(context, conf, kafkaParams, offsets, new RecordTransform(conf, outputSchema));
+      return KafkaUtils.createDirectStream(
+        context.getSparkStreamingContext(), LocationStrategies.PreferConsistent(),
+        ConsumerStrategies.Subscribe(Collections.singleton(conf.getTopic()), kafkaParams, offsets)
+      );
     }
   }
 
-  private static <K, V> JavaDStream<StructuredRecord> createKafkaDirectStream(
-    StreamingContext context,
-    ConfluentStreamingSourceConfig conf,
-    Map<String, Object> kafkaParams,
-    Map<TopicPartition, Long> offsets,
+  static <K, V> JavaDStream<StructuredRecord> getStructuredRecordJavaDStream(
+    JavaInputDStream<ConsumerRecord<K, V>> consumerRecordJavaInputDStream,
     Function2<JavaRDD<ConsumerRecord<K, V>>, Time, JavaRDD<StructuredRecord>> transform
   ) {
-    return KafkaUtils.createDirectStream(
-      context.getSparkStreamingContext(), LocationStrategies.PreferConsistent(),
-      ConsumerStrategies.<K, V>Subscribe(Collections.singleton(conf.getTopic()), kafkaParams, offsets)
-    ).transform(transform);
+    return consumerRecordJavaInputDStream.transform(transform);
   }
 
   @Nonnull
@@ -166,10 +163,10 @@ final class ConfluentStreamingSourceUtil {
 
   @Nonnull
   private static Map<TopicPartition, Long> getOffsets(ConfluentStreamingSourceConfig conf, FailureCollector collector,
-                                                      Consumer<byte[], byte[]> consumer) {
-    Map<TopicPartition, Long> offsets = conf.getInitialPartitionOffsets(
-      getPartitions(consumer, conf, collector), collector);
-    collector.getOrThrowException();
+                                                      Consumer<byte[], byte[]> consumer,
+                                                      Supplier<Map<TopicPartition, Long>> stateSupplier) {
+
+    Map<TopicPartition, Long> offsets = getInitialPartitionOffsets(conf, stateSupplier, consumer, collector);
 
     // KafkaUtils doesn't understand -1 and -2 as smallest offset and latest offset.
     // so we have to replace them with the actual smallest and latest
@@ -202,6 +199,23 @@ final class ConfluentStreamingSourceUtil {
     return offsets;
   }
 
+  static Map<TopicPartition, Long> getInitialPartitionOffsets(ConfluentStreamingSourceConfig conf,
+                                                              Supplier<Map<TopicPartition, Long>> stateSupplier,
+                                                              Consumer<byte[], byte[]> consumer,
+                                                              FailureCollector collector) {
+    Map<TopicPartition, Long> savedPartitions = stateSupplier.get();
+    if (!savedPartitions.isEmpty()) {
+      LOG.info("Saved partitions found {}. ", savedPartitions);
+      return savedPartitions;
+    }
+
+    LOG.info("No saved partitions found.");
+    Map<TopicPartition, Long> offsets = conf.getInitialPartitionOffsets(
+      getPartitions(consumer, conf, collector), collector);
+    collector.getOrThrowException();
+    return offsets;
+  }
+
   private static Set<Integer> getPartitions(Consumer<byte[], byte[]> consumer, ConfluentStreamingSourceConfig conf,
                                             FailureCollector collector) {
     Set<Integer> partitions = conf.getPartitions(collector);
@@ -218,10 +232,16 @@ final class ConfluentStreamingSourceUtil {
     return partitions;
   }
 
+  static Function2<ConsumerRecord<Object, Object>, Time, StructuredRecord>
+  getRecordTransformFunction(ConfluentStreamingSourceConfig conf, Schema outputSchema) {
+    return conf.getFormat() == null ?
+      new BytesFunction(conf, outputSchema) : new FormatFunction(conf, outputSchema);
+  }
+
   /**
    * Applies the format function to each rdd.
    */
-  private static class AvroRecordTransform
+ static class AvroRecordTransform
     implements Function2<JavaRDD<ConsumerRecord<Object, Object>>, Time, JavaRDD<StructuredRecord>> {
 
     private final ConfluentStreamingSourceConfig conf;
@@ -234,15 +254,19 @@ final class ConfluentStreamingSourceUtil {
 
     @Override
     public JavaRDD<StructuredRecord> call(JavaRDD<ConsumerRecord<Object, Object>> input, Time batchTime) {
-      return input.map(new AvroFunction(batchTime.milliseconds(), conf, outputSchema));
+      Function2<ConsumerRecord<Object, Object>, Time, StructuredRecord> recordFunction =
+        new AvroFunction(conf, outputSchema);
+
+      return input.map((Function<ConsumerRecord<Object, Object>, StructuredRecord>) consumerRecord ->
+        recordFunction.call(consumerRecord, batchTime));
     }
   }
 
   /**
    * Applies the format function to each rdd.
    */
-  private static class RecordTransform
-    implements Function2<JavaRDD<ConsumerRecord<byte[], byte[]>>, Time, JavaRDD<StructuredRecord>> {
+ static class RecordTransform
+    implements Function2<JavaRDD<ConsumerRecord<Object, Object>>, Time, JavaRDD<StructuredRecord>> {
 
     private final ConfluentStreamingSourceConfig conf;
     private final Schema outputSchema;
@@ -253,11 +277,12 @@ final class ConfluentStreamingSourceUtil {
     }
 
     @Override
-    public JavaRDD<StructuredRecord> call(JavaRDD<ConsumerRecord<byte[], byte[]>> input, Time batchTime) {
-      Function<ConsumerRecord<byte[], byte[]>, StructuredRecord> recordFunction = conf.getFormat() == null ?
-        new BytesFunction(batchTime.milliseconds(), conf, outputSchema) :
-        new FormatFunction(batchTime.milliseconds(), conf, outputSchema);
-      return input.map(recordFunction);
+    public JavaRDD<StructuredRecord> call(JavaRDD<ConsumerRecord<Object, Object>> input, Time batchTime) {
+      Function2<ConsumerRecord<Object, Object>, Time, StructuredRecord> recordFunction = conf.getFormat() == null ?
+        new BytesFunction(conf, outputSchema) :
+        new FormatFunction(conf, outputSchema);
+      return input.map((Function<ConsumerRecord<Object, Object>, StructuredRecord>) consumerRecord ->
+        recordFunction.call(consumerRecord, batchTime));
     }
   }
 
@@ -265,26 +290,24 @@ final class ConfluentStreamingSourceUtil {
    * Common logic for transforming kafka key, message, partition, and offset into a structured record.
    * Everything here should be serializable, as Spark Streaming will serialize all functions.
    */
-  private abstract static class BaseFunction<K, V> implements Function<ConsumerRecord<K, V>, StructuredRecord> {
+  private abstract static class BaseFunction<K, V> implements Function2<ConsumerRecord<K, V>, Time, StructuredRecord> {
     protected final ConfluentStreamingSourceConfig conf;
-    private final long ts;
     private final Schema outputSchema;
 
-    BaseFunction(long ts, ConfluentStreamingSourceConfig conf, Schema outputSchema) {
-      this.ts = ts;
+    BaseFunction(ConfluentStreamingSourceConfig conf, Schema outputSchema) {
       this.conf = conf;
       this.outputSchema = outputSchema;
     }
 
     @Override
-    public StructuredRecord call(ConsumerRecord<K, V> in) throws Exception {
+    public StructuredRecord call(ConsumerRecord<K, V> in, Time batchTime) throws Exception {
       String timeField = conf.getTimeField();
       String keyField = conf.getKeyField();
       String partitionField = conf.getPartitionField();
       String offsetField = conf.getOffsetField();
       StructuredRecord.Builder builder = StructuredRecord.builder(outputSchema);
       if (timeField != null) {
-        builder.set(timeField, ts);
+        builder.set(timeField, batchTime.milliseconds());
       }
       if (keyField != null) {
         builder.set(keyField, convertKey(in.key()));
@@ -304,20 +327,20 @@ final class ConfluentStreamingSourceUtil {
     protected abstract void addMessage(StructuredRecord.Builder builder, V message) throws Exception;
   }
 
-  private abstract static class BinaryBaseFunction extends BaseFunction<byte[], byte[]> {
-    BinaryBaseFunction(long ts, ConfluentStreamingSourceConfig conf, Schema outputSchema) {
-      super(ts, conf, outputSchema);
+  private abstract static class BinaryBaseFunction extends BaseFunction<Object, Object> {
+    BinaryBaseFunction(ConfluentStreamingSourceConfig conf, Schema outputSchema) {
+      super(conf, outputSchema);
     }
 
     @Override
-    protected Object convertKey(byte[] key) {
+    protected Object convertKey(Object key) {
       if (key == null) {
         return null;
       }
       Schema keySchemaNullable = conf.getSchema().getField(conf.getKeyField()).getSchema();
       Schema keySchema = keySchemaNullable.isNullable() ? keySchemaNullable.getNonNullable() : keySchemaNullable;
       if (keySchema.getType() == Schema.Type.STRING) {
-        return new String(key, StandardCharsets.UTF_8);
+        return new String((byte[]) key, StandardCharsets.UTF_8);
       }
       if (keySchema.getType() == Schema.Type.BYTES) {
         return key;
@@ -333,12 +356,12 @@ final class ConfluentStreamingSourceUtil {
   private static class BytesFunction extends BinaryBaseFunction {
     private transient String messageField;
 
-    BytesFunction(long ts, ConfluentStreamingSourceConfig conf, Schema outputSchema) {
-      super(ts, conf, outputSchema);
+    BytesFunction(ConfluentStreamingSourceConfig conf, Schema outputSchema) {
+      super(conf, outputSchema);
     }
 
     @Override
-    protected void addMessage(StructuredRecord.Builder builder, byte[] message) {
+    protected void addMessage(StructuredRecord.Builder builder, Object message) {
       builder.set(getMessageField(), message);
     }
 
@@ -367,12 +390,12 @@ final class ConfluentStreamingSourceUtil {
   private static class FormatFunction extends BinaryBaseFunction {
     private transient RecordFormat<ByteBuffer, StructuredRecord> recordFormat;
 
-    FormatFunction(long ts, ConfluentStreamingSourceConfig conf, Schema outputSchema) {
-      super(ts, conf, outputSchema);
+    FormatFunction(ConfluentStreamingSourceConfig conf, Schema outputSchema) {
+      super(conf, outputSchema);
     }
 
     @Override
-    protected void addMessage(StructuredRecord.Builder builder, byte[] message) throws Exception {
+    protected void addMessage(StructuredRecord.Builder builder, Object message) throws Exception {
       // first time this was called, initialize record format
       if (recordFormat == null) {
         Schema messageSchema = conf.getMessageSchema();
@@ -380,7 +403,7 @@ final class ConfluentStreamingSourceUtil {
         recordFormat = RecordFormats.createInitializedFormat(spec);
       }
 
-      StructuredRecord messageRecord = recordFormat.read(ByteBuffer.wrap(message));
+      StructuredRecord messageRecord = recordFormat.read(ByteBuffer.wrap((byte[]) message));
       for (Schema.Field field : messageRecord.getSchema().getFields()) {
         String fieldName = field.getName();
         builder.set(fieldName, messageRecord.get(fieldName));
@@ -391,8 +414,8 @@ final class ConfluentStreamingSourceUtil {
   private static class AvroFunction extends BaseFunction<Object, Object> {
     private transient AvroToStructuredTransformer transformer;
 
-    AvroFunction(long ts, ConfluentStreamingSourceConfig conf, Schema outputSchema) {
-      super(ts, conf, outputSchema);
+    AvroFunction(ConfluentStreamingSourceConfig conf, Schema outputSchema) {
+      super(conf, outputSchema);
     }
 
     @Override
