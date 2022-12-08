@@ -22,21 +22,19 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.spark.api.java.function.{Function2, VoidFunction}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.streaming.api.java.JavaDStream
-import org.apache.spark.streaming.{Duration, StreamingContext, Time}
 import org.apache.spark.streaming.dstream.{DStream, InputDStream}
 import org.apache.spark.streaming.kafka010.{HasOffsetRanges, OffsetRange}
-
-import java.util.function.Consumer
+import org.apache.spark.streaming.{Duration, StreamingContext, Time}
 
 /**
  * DStream that implements {@link StreamingEventHandler} .
  * This DStream will keep the Confluent offsets for each batch RDD before applying the _transformFunction.
  * On calling onBatchCompleted, the _stateConsumer will be provided with these offsets.
  *
- * @param _ssc           Spark streaming context
- * @param _kafkaDStream  DStream created through KafkaUtil.createDirectStream
- * @param _kafkaConf     Config object for Kafka Streaming Source
- * @param _stateConsumer Consumer function for the state produced
+ * @param _ssc               Spark streaming context
+ * @param _kafkaDStream      DStream created through KafkaUtil.createDirectStream
+ * @param _transformFunction Function for transforming consumer record into structured record
+ * @param _stateConsumer     Consumer function for the state produced
  */
 class ConfluentDStream(_ssc: StreamingContext,
                        _kafkaDStream: InputDStream[ConsumerRecord[Object, Object]],
