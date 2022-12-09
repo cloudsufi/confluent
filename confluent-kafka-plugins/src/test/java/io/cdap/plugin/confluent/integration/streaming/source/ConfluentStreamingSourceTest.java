@@ -429,7 +429,7 @@ public class ConfluentStreamingSourceTest extends ConfluentStreamingTestBase {
     return deployETL(
       new ETLPlugin(ConfluentStreamingSource.PLUGIN_NAME, StreamingSource.PLUGIN_TYPE, properties, null),
       MockSink.getPlugin(outputTable),
-      "KafkaSourceApp"
+      "KafkaSourceApp", false
     );
   }
 

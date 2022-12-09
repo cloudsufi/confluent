@@ -24,6 +24,7 @@ import io.cdap.cdap.datastreams.DataStreamsApp;
 import io.cdap.cdap.datastreams.DataStreamsSparkLauncher;
 import io.cdap.cdap.etl.mock.batch.MockSink;
 import io.cdap.cdap.etl.mock.test.HydratorTestBase;
+import io.cdap.cdap.etl.mock.transform.RecoveringTransform;
 import io.cdap.cdap.etl.proto.v2.DataStreamsConfig;
 import io.cdap.cdap.etl.proto.v2.ETLPlugin;
 import io.cdap.cdap.etl.proto.v2.ETLStage;
@@ -72,7 +73,7 @@ public abstract class ConfluentStreamingTestBase extends HydratorTestBase {
 
     LOG.info("Setting up plugins");
     addPluginArtifact(
-      NamespaceId.DEFAULT.artifact("confluent-kafka-plugins", "1.0.0"),
+      NamespaceId.DEFAULT.artifact("confluent-kafka-plugins", "1.1.0"),
       APP_ARTIFACT_ID,
       ConfluentStreamingSource.class, ConfluentStreamingSink.class,
       KafkaUtils.class, TopicPartition.class,
@@ -81,9 +82,10 @@ public abstract class ConfluentStreamingTestBase extends HydratorTestBase {
     );
   }
 
-  protected SparkManager deployETL(ETLPlugin sourcePlugin, ETLPlugin sinkPlugin, String appName) throws Exception {
+  protected SparkManager deployETL(ETLPlugin sourcePlugin, ETLPlugin sinkPlugin, String appName, boolean isRecovery) throws Exception {
     ETLStage source = new ETLStage("source", sourcePlugin);
     ETLStage sink = new ETLStage("sink", sinkPlugin);
+    
     DataStreamsConfig etlConfig = DataStreamsConfig.builder()
       .addStage(source)
       .addStage(sink)
@@ -91,7 +93,15 @@ public abstract class ConfluentStreamingTestBase extends HydratorTestBase {
       .setBatchInterval("1s")
       .setStopGracefully(true)
       .build();
-
+    if (isRecovery) {
+      etlConfig = DataStreamsConfig.builder()
+        .addStage(source)
+        .addStage(new ETLStage("retry_transform", RecoveringTransform.getPlugin()))
+        .addStage(sink)
+        .addConnection("source", "retry_transform")
+        .addConnection("retry_transform", "sink")
+        .build();
+    }
     AppRequest<DataStreamsConfig> appRequest = new AppRequest<>(APP_ARTIFACT, etlConfig);
     ApplicationId appId = NamespaceId.DEFAULT.app(appName);
     ApplicationManager applicationManager = deployApplication(appId, appRequest);

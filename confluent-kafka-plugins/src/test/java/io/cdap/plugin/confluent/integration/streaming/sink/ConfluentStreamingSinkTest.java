@@ -271,7 +271,7 @@ public class ConfluentStreamingSinkTest extends ConfluentStreamingTestBase {
     return deployETL(
       sourcePlugin,
       new ETLPlugin(ConfluentStreamingSink.PLUGIN_NAME, SparkSink.PLUGIN_TYPE, properties, null),
-      "KafkaSinkApp"
+      "KafkaSinkApp", false
     );
   }
 
