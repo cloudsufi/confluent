@@ -99,7 +99,7 @@ public class ConfluentStreamingSourceTest extends ConfluentStreamingTestBase {
     KafkaTestUtils.deleteTopic(topic);
     if (programManager != null) {
       programManager.stop();
-      programManager.waitForStopped(10, TimeUnit.SECONDS);
+      programManager.waitForStopped(1, TimeUnit.MINUTES);
       programManager.waitForRun(ProgramRunStatus.KILLED, 10, TimeUnit.SECONDS);
     }
   }
@@ -129,7 +129,7 @@ public class ConfluentStreamingSourceTest extends ConfluentStreamingTestBase {
     waitForRecords(outputTable, expectedRecords);
 
     programManager.stop();
-    programManager.waitForStopped(10, TimeUnit.SECONDS);
+    programManager.waitForStopped(1, TimeUnit.MINUTES);
 
     // clear the output table
     DataSetManager<Table> outputManager = getDataset(outputTable);
