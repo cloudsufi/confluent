@@ -134,11 +134,12 @@
         },
         {
           "widget-type": "textbox",
-          "label": "Value Field",
-          "name": "valueField",
+          "label": "Value Schema",
+          "name": "valueSchema",
           "plugin-function": {
             "label": "Get Schema",
             "widget": "outputSchema",
+            "output-property": "schema",
             "position": "bottom",
             "multiple-inputs": false,
             "button-class": "btn-hydrator"
@@ -174,8 +175,19 @@
   "outputs": [
     {
       "name": "schema",
+      "label": "schema",
       "widget-type": "schema",
       "widget-attributes": {
+        "schema-types": [
+          "boolean",
+          "int",
+          "long",
+          "float",
+          "double",
+          "bytes",
+          "string",
+          "record"
+        ],
         "default-schema": {
           "name": "etlSchemaBody",
           "type": "record",

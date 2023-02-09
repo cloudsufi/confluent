@@ -530,7 +530,7 @@ final class ConfluentStreamingSourceUtil {
       }
       GenericRecord genericRecord = (GenericRecord) message;
       StructuredRecord messageRecord = transformer.transform(genericRecord);
-      builder.set(conf.getValueField(), messageRecord);
+      builder.set(conf.getvalueSchema(), messageRecord);
     }
   }
 }

@@ -33,8 +33,6 @@ import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaMetadata;
 import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
 import org.apache.spark.streaming.api.java.JavaDStream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -50,7 +48,6 @@ import java.util.Map;
 @Description("Confluent Kafka streaming source.")
 public class ConfluentStreamingSource extends StreamingSource<StructuredRecord> implements StreamingStateHandler {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ConfluentStreamingSource.class);
   public static final String PLUGIN_NAME = "Confluent";
 
   private final ConfluentStreamingSourceConfig conf;
@@ -102,32 +99,25 @@ public class ConfluentStreamingSource extends StreamingSource<StructuredRecord> 
       options.put("basic.auth.user.info", conf.getSchemaRegistryApiKey() + ':' + conf.getSchemaRegistryApiSecret());
       CachedSchemaRegistryClient schemaRegistryClient =
         new CachedSchemaRegistryClient(conf.getSchemaRegistryUrl(), 2, options);
-      Schema initialSchema = conf.getSchema(failureCollector);
       List<Schema.Field> newFields = new ArrayList<>();
       boolean keySchemaShouldBeAdded = conf.getKeyField() != null;
-      boolean messageSchemaShouldBeAdded = conf.getValueField() != null;
-      for (Schema.Field field : initialSchema.getFields()) {
-        if (field.getName().equals(conf.getKeyField())) {
-          Schema keySchema = fetchSchema(schemaRegistryClient, conf.getTopic() + "-key");
-          newFields.add(Schema.Field.of(field.getName(), keySchema));
-          keySchemaShouldBeAdded = false;
-        } else if (field.getName().equals(conf.getValueField())) {
-          Schema valueSchema = fetchSchema(schemaRegistryClient, conf.getTopic() + "-value");
-          newFields.add(Schema.Field.of(field.getName(), valueSchema));
-          messageSchemaShouldBeAdded = false;
-        } else {
-          newFields.add(field);
-        }
-      }
+      boolean messageSchemaShouldBeAdded = conf.getvalueSchema() != null;
       if (keySchemaShouldBeAdded) {
         Schema keySchema = fetchSchema(schemaRegistryClient, conf.getTopic() + "-key");
         newFields.add(Schema.Field.of(conf.getKeyField(), keySchema));
       }
       if (messageSchemaShouldBeAdded) {
         Schema valueSchema = fetchSchema(schemaRegistryClient, conf.getTopic() + "-value");
-        newFields.add(Schema.Field.of(conf.getValueField(), valueSchema));
+        if (valueSchema.getRecordName().equals(conf.getvalueSchema())) {
+          newFields.add(Schema.Field.of(conf.getvalueSchema(), valueSchema));
+        } else {
+          failureCollector.addFailure(String.format("Invalid value schema name '%s'.", conf.getvalueSchema()),
+                                      null)
+            .withConfigProperty(ConfluentStreamingSourceConfig.NAME_VALUE_SCHEMA);
+          throw failureCollector.getOrThrowException();
+        }
       }
-      return Schema.recordOf(initialSchema.getRecordName(), newFields);
+      return Schema.recordOf("output", newFields);
     } catch (IOException | RestClientException e) {
       failureCollector.addFailure("Failed to infer output schema. Reason: " + e.getMessage(), null)
         .withStacktrace(e.getStackTrace());

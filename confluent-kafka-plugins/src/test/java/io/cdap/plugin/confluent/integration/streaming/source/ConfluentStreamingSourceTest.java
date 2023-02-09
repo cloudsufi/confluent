@@ -301,7 +301,7 @@ public class ConfluentStreamingSourceTest extends ConfluentStreamingTestBase {
     properties.put(ConfluentStreamingSourceConfig.NAME_SR_URL, KafkaTestUtils.SR_URL);
     properties.put(ConfluentStreamingSourceConfig.NAME_SR_API_KEY, KafkaTestUtils.SR_API_KEY);
     properties.put(ConfluentStreamingSourceConfig.NAME_SR_API_SECRET, KafkaTestUtils.SR_API_SECRET);
-    properties.put(ConfluentStreamingSourceConfig.NAME_VALUE_FIELD, messageField);
+    properties.put(ConfluentStreamingSourceConfig.NAME_VALUE_SCHEMA, messageField);
     properties.put(ConfluentStreamingSourceConfig.NAME_KEYFIELD, keyField);
     properties.put(ConfluentStreamingSourceConfig.NAME_TIMEFIELD, timeField);
     properties.put(ConfluentStreamingSourceConfig.NAME_PARTITION_FIELD, partitionField);
@@ -378,7 +378,7 @@ public class ConfluentStreamingSourceTest extends ConfluentStreamingTestBase {
     properties.put(ConfluentStreamingSourceConfig.NAME_SR_URL, KafkaTestUtils.SR_URL);
     properties.put(ConfluentStreamingSourceConfig.NAME_SR_API_KEY, KafkaTestUtils.SR_API_KEY);
     properties.put(ConfluentStreamingSourceConfig.NAME_SR_API_SECRET, KafkaTestUtils.SR_API_SECRET);
-    properties.put(ConfluentStreamingSourceConfig.NAME_VALUE_FIELD, messageField);
+    properties.put(ConfluentStreamingSourceConfig.NAME_VALUE_SCHEMA, messageField);
     programManager = deploySourcePlugin(properties);
     programManager.startAndWaitForRun(ProgramRunStatus.RUNNING, 10, TimeUnit.SECONDS);
 

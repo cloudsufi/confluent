@@ -64,9 +64,12 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
   public static final String NAME_SR_URL = "schemaRegistryUrl";
   public static final String NAME_SR_API_KEY = "schemaRegistryApiKey";
   public static final String NAME_SR_API_SECRET = "schemaRegistryApiSecret";
-  public static final String NAME_VALUE_FIELD = "valueField";
+  public static final String NAME_VALUE_SCHEMA = "valueSchema";
   public static final String NAME_FORMAT = "format";
   public static final String NAME_KAFKA_PROPERTIES = "kafkaProperties";
+
+  private static final Schema DEFAULT_SCHEMA =
+    Schema.recordOf("etlSchemaBody", Schema.Field.of("message", Schema.of(Schema.Type.STRING)));
 
   private static final String SEPARATOR = ":";
 
@@ -112,6 +115,7 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
   @Description("Output schema of the source, including the timeField and keyField. " +
     "The fields excluding the timeField and keyField are used in conjunction with the format " +
     "to parse Kafka payloads.")
+  @Nullable
   private final String schema;
 
   @Name(NAME_FORMAT)
@@ -188,12 +192,12 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
   @Nullable
   private final String schemaRegistryApiSecret;
 
-  @Name(NAME_VALUE_FIELD)
-  @Description("Name of the field containing the message payload. Required when Schema Registry is used." +
-    "This field will be used to infer schema from Schema Registry.")
+  @Name(NAME_VALUE_SCHEMA)
+  @Description("Name of the value schema containing the message payload. Required when Schema Registry is used." +
+    "This name will be used to infer schema from Schema Registry.")
   @Macro
   @Nullable
-  private final String valueField;
+  private final String valueSchema;
 
   /**
    * Constructor for ConfluentStreamingSourceConfig object.
@@ -216,7 +220,7 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
    * @param schemaRegistryUrl the schema registry url
    * @param schemaRegistryApiKey the schema registry api key
    * @param schemaRegistryApiSecret the registry api secret
-   * @param valueField the value field
+   * @param valueSchema the value schema
    */
   public ConfluentStreamingSourceConfig(
     String referenceName,
@@ -238,7 +242,7 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
     @Nullable String schemaRegistryUrl,
     @Nullable String schemaRegistryApiKey,
     @Nullable String schemaRegistryApiSecret,
-    @Nullable String valueField) {
+    @Nullable String valueSchema) {
     super(referenceName);
     this.brokers = brokers;
     this.topic = topic;
@@ -258,7 +262,7 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
     this.schemaRegistryUrl = schemaRegistryUrl;
     this.schemaRegistryApiKey = schemaRegistryApiKey;
     this.schemaRegistryApiSecret = schemaRegistryApiSecret;
-    this.valueField = valueField;
+    this.valueSchema = valueSchema;
   }
 
   public String getTopic() {
@@ -306,7 +310,7 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
   @Nullable
   public Schema getSchema() {
     try {
-      return Strings.isNullOrEmpty(schema) ? null : Schema.parseJson(schema);
+      return Strings.isNullOrEmpty(schema) ? DEFAULT_SCHEMA : Schema.parseJson(schema);
     } catch (IOException e) {
       throw new IllegalArgumentException("Invalid schema : " + e.getMessage());
     }
@@ -320,7 +324,7 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
   @Nullable
   public Schema getSchema(FailureCollector collector) {
     try {
-      return Strings.isNullOrEmpty(schema) ? null : Schema.parseJson(schema);
+      return Strings.isNullOrEmpty(schema) ? DEFAULT_SCHEMA : Schema.parseJson(schema);
     } catch (IOException e) {
       collector.addFailure("Invalid schema : " + e.getMessage(), null).withConfigProperty(NAME_SCHEMA);
     }
@@ -517,8 +521,8 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
   }
 
   @Nullable
-  public String getValueField() {
-    return getNullableProperty(valueField);
+  public String getvalueSchema() {
+    return getNullableProperty(valueSchema);
   }
 
   @Nullable
@@ -593,9 +597,9 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
         collector.addFailure("Schema Registry API Secret must be provided.", null)
           .withConfigProperty(NAME_SR_API_SECRET);
       }
-      if (!containsMacro(NAME_VALUE_FIELD) && Strings.isNullOrEmpty(valueField)) {
-        collector.addFailure("Message Field should be provided when Schema Registry is used.", null)
-          .withConfigProperty(NAME_VALUE_FIELD);
+      if (!containsMacro(NAME_VALUE_SCHEMA) && Strings.isNullOrEmpty(valueSchema)) {
+        collector.addFailure("Message Value Schema should be provided when Schema Registry is used.", null)
+          .withConfigProperty(NAME_VALUE_SCHEMA);
       }
     } else if (!Strings.isNullOrEmpty(format)) {
       // it is a format, make sure we can instantiate it.
