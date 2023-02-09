@@ -90,7 +90,7 @@
     <cdap.version>6.8.0</cdap.version>
     <cdap.plugin.version>2.10.0</cdap.plugin.version>
     <spark1.version>1.6.1</spark1.version>
-    <spark3.version>3.1.2</spark3.version>
+    <spark2.version>2.3.0</spark2.version>
     <widgets.dir>widgets</widgets.dir>
     <docs.dir>docs</docs.dir>
     <kafka8.version>0.8.2.2</kafka8.version>
@@ -149,10 +149,6 @@
         <exclusion>
           <groupId>org.apache.spark</groupId>
           <artifactId>spark-core_2.10</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>io.cdap.cdap</groupId>
-          <artifactId>cdap-spark-core2_2.11</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -281,7 +277,7 @@
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
-      <version>3.9</version>
+      <version>3.0</version>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>

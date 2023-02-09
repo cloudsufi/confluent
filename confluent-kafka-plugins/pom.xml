@@ -56,13 +56,6 @@
       <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
       <version>${avro.version}</version>
-      <exclusions>
-        <!-- The one from spark should be used -->
-        <exclusion>
-          <groupId>com.thoughtworks.paranamer</groupId>
-          <artifactId>paranamer</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.confluent</groupId>
@@ -76,7 +69,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.kafka</groupId>
-      <artifactId>kafka_2.12</artifactId>
+      <artifactId>kafka_2.11</artifactId>
       <version>${kafka10.version}</version>
       <exclusions>
         <exclusion>
@@ -91,16 +84,16 @@
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-streaming-kafka-0-10_2.12</artifactId>
-      <version>${spark3.version}</version>
+      <artifactId>spark-streaming-kafka-0-10_2.11</artifactId>
+      <version>${spark2.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.kafka</groupId>
-          <artifactId>kafka_2.12</artifactId>
+          <artifactId>kafka_2.11</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.apache.spark</groupId>
-          <artifactId>spark-tags_2.12</artifactId>
+          <artifactId>spark-tags_2.11</artifactId>
         </exclusion>
         <exclusion>
           <groupId>net.jpountz.lz4</groupId>
@@ -110,8 +103,8 @@
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-mllib_2.12</artifactId>
-      <version>${spark3.version}</version>
+      <artifactId>spark-mllib_2.11</artifactId>
+      <version>${spark2.version}</version>
       <scope>provided</scope>
       <exclusions>
         <exclusion>
@@ -122,14 +115,14 @@
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-streaming_2.12</artifactId>
-      <version>${spark3.version}</version>
+      <artifactId>spark-streaming_2.11</artifactId>
+      <version>${spark2.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_2.12</artifactId>
-      <version>${spark3.version}</version>
+      <artifactId>spark-core_2.11</artifactId>
+      <version>${spark2.version}</version>
       <scope>provided</scope>
       <exclusions>
         <exclusion>
@@ -180,19 +173,19 @@
     </dependency>
     <dependency>
       <groupId>io.cdap.cdap</groupId>
-      <artifactId>cdap-spark-core3_2.12</artifactId>
+      <artifactId>cdap-spark-core2_2.11</artifactId>
       <version>${cdap.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.cdap.cdap</groupId>
-      <artifactId>cdap-data-pipeline3_2.12</artifactId>
+      <artifactId>cdap-data-pipeline2_2.11</artifactId>
       <version>${cdap.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.cdap.cdap</groupId>
-      <artifactId>cdap-data-streams3_2.12</artifactId>
+      <artifactId>cdap-data-streams2_2.11</artifactId>
       <version>${cdap.version}</version>
       <scope>test</scope>
     </dependency>
@@ -229,33 +222,6 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>net.alchim31.maven</groupId>
-        <artifactId>scala-maven-plugin</artifactId>
-        <version>3.3.1</version>
-        <executions>
-          <execution>
-            <id>compile</id>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-            <phase>compile</phase>
-          </execution>
-          <execution>
-            <id>test-compile</id>
-            <goals>
-              <goal>testCompile</goal>
-            </goals>
-            <phase>test-compile</phase>
-          </execution>
-          <execution>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
         <version>3.5.1</version>
@@ -264,8 +230,10 @@
             <_exportcontents>
               io.cdap.plugin.confluent.*;
               org.apache.spark.streaming.kafka010.*;
-              org.apache.kafka.*;
+              org.apache.kafka.common.*;
+              org.apache.kafka.common.serialization.*;
               io.confluent.kafka.serializers.*;
+              org.apache.kafka.clients.*;
             </_exportcontents>
             <Embed-Dependency>*;inline=false;scope=compile</Embed-Dependency>
             <Embed-Transitive>true</Embed-Transitive>

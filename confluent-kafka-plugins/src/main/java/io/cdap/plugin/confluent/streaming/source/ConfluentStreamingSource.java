@@ -27,14 +27,11 @@ import io.cdap.cdap.etl.api.PipelineConfigurer;
 import io.cdap.cdap.etl.api.StageConfigurer;
 import io.cdap.cdap.etl.api.streaming.StreamingContext;
 import io.cdap.cdap.etl.api.streaming.StreamingSource;
-import io.cdap.cdap.etl.api.streaming.StreamingStateHandler;
 import io.cdap.plugin.common.Constants;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaMetadata;
 import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
 import org.apache.spark.streaming.api.java.JavaDStream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -48,9 +45,7 @@ import java.util.Map;
 @Plugin(type = StreamingSource.PLUGIN_TYPE)
 @Name(ConfluentStreamingSource.PLUGIN_NAME)
 @Description("Confluent Kafka streaming source.")
-public class ConfluentStreamingSource extends StreamingSource<StructuredRecord> implements StreamingStateHandler {
-
-  private static final Logger LOG = LoggerFactory.getLogger(ConfluentStreamingSource.class);
+public class ConfluentStreamingSource extends StreamingSource<StructuredRecord> {
   public static final String PLUGIN_NAME = "Confluent";
 
   private final ConfluentStreamingSourceConfig conf;
@@ -84,7 +79,6 @@ public class ConfluentStreamingSource extends StreamingSource<StructuredRecord> 
     collector.getOrThrowException();
 
     context.registerLineage(conf.referenceName);
-
     return ConfluentStreamingSourceUtil.getStructuredRecordJavaDStream(context, conf, outputSchema, collector);
   }
 

@@ -53,10 +53,6 @@ public class KafkaPartitionOffsets {
   public long getPartitionOffset(int partition, long defaultValue) {
     return partitionOffsets.getOrDefault(partition, defaultValue);
   }
-  
-  public Map<Integer, Long> getPartitionOffsets() {
-    return Collections.unmodifiableMap(partitionOffsets);
-  }
 
   /**
    * Loads the {@link KafkaPartitionOffsets} from the given input file.

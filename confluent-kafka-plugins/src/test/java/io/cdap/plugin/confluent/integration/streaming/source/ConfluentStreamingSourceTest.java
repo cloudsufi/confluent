@@ -25,7 +25,6 @@ import io.cdap.cdap.etl.proto.v2.ETLPlugin;
 import io.cdap.cdap.proto.ProgramRunStatus;
 import io.cdap.cdap.test.DataSetManager;
 import io.cdap.cdap.test.SparkManager;
-import io.cdap.cdap.test.TestConfiguration;
 import io.cdap.plugin.common.Constants;
 import io.cdap.plugin.confluent.integration.KafkaTestUtils;
 import io.cdap.plugin.confluent.integration.streaming.ConfluentStreamingTestBase;
@@ -42,7 +41,6 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
@@ -66,13 +64,6 @@ import javax.annotation.Nullable;
  */
 public class ConfluentStreamingSourceTest extends ConfluentStreamingTestBase {
 
-  // Explicitly turn off state tracking to ensure checkpointing is on.
-  // This test needs a fix to work with checkpointing disabled. See PLUGIN-1414
-  @ClassRule
-  public static final TestConfiguration CONFIG =
-    new TestConfiguration("explore.enabled", false,
-                          "feature.streaming.pipeline.native.state.tracking.enabled", "false");
-  
   private static KafkaProducer<byte[], byte[]> kafkaProducer;
   private static KafkaProducer<Object, Object> kafkaAvroProducer;
 
