@@ -117,7 +117,7 @@ public class ConfluentStreamingSource extends StreamingSource<StructuredRecord> 
           throw failureCollector.getOrThrowException();
         }
       }
-      return Schema.recordOf("output", newFields);
+      return Schema.recordOf(ConfluentStreamingSourceConfig.NAME_OUTPUT, newFields);
     } catch (IOException | RestClientException e) {
       failureCollector.addFailure("Failed to infer output schema. Reason: " + e.getMessage(), null)
         .withStacktrace(e.getStackTrace());

@@ -65,6 +65,7 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
   public static final String NAME_SR_API_KEY = "schemaRegistryApiKey";
   public static final String NAME_SR_API_SECRET = "schemaRegistryApiSecret";
   public static final String NAME_VALUE_SCHEMA = "valueSchema";
+  public static final String NAME_OUTPUT = "output";
   public static final String NAME_FORMAT = "format";
   public static final String NAME_KAFKA_PROPERTIES = "kafkaProperties";
 
