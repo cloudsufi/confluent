@@ -160,7 +160,7 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
   @Nullable
   private final String kafkaProperties;
 
-  @Name(NAME_CLUSTER_API_KEY)
+  /*@Name(NAME_CLUSTER_API_KEY)
   @Description("The Confluent API Key.")
   @Macro
   private final String clusterApiKey;
@@ -168,7 +168,7 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
   @Name(NAME_CLUSTER_API_SECRET)
   @Description("The Confluent API Secret.")
   @Macro
-  private final String clusterApiSecret;
+  private final String clusterApiSecret;*/
 
   @Name(NAME_SR_URL)
   @Description("The Schema Registry endpoint URL.")
@@ -211,8 +211,6 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
    * @param offsetField the offset field
    * @param maxRatePerPartition the max rate per partition
    * @param kafkaProperties the kafka properties
-   * @param clusterApiKey the cluster api key
-   * @param clusterApiSecret the cluster api secret
    * @param schemaRegistryUrl the schema registry url
    * @param schemaRegistryApiKey the schema registry api key
    * @param schemaRegistryApiSecret the registry api secret
@@ -233,8 +231,6 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
     @Nullable String offsetField,
     @Nullable Integer maxRatePerPartition,
     @Nullable String kafkaProperties,
-    String clusterApiKey,
-    String clusterApiSecret,
     @Nullable String schemaRegistryUrl,
     @Nullable String schemaRegistryApiKey,
     @Nullable String schemaRegistryApiSecret,
@@ -253,8 +249,8 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
     this.offsetField = offsetField;
     this.maxRatePerPartition = maxRatePerPartition;
     this.kafkaProperties = kafkaProperties;
-    this.clusterApiKey = clusterApiKey;
-    this.clusterApiSecret = clusterApiSecret;
+    /*this.clusterApiKey = clusterApiKey;
+    this.clusterApiSecret = clusterApiSecret;*/
     this.schemaRegistryUrl = schemaRegistryUrl;
     this.schemaRegistryApiKey = schemaRegistryApiKey;
     this.schemaRegistryApiSecret = schemaRegistryApiSecret;
@@ -493,14 +489,6 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
     return partitionSet;
   }
 
-  public String getClusterApiKey() {
-    return clusterApiKey;
-  }
-
-  public String getClusterApiSecret() {
-    return clusterApiSecret;
-  }
-
   @Nullable
   public String getSchemaRegistryUrl() {
     return getNullableProperty(schemaRegistryUrl);
@@ -569,7 +557,7 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
         .withConfigProperty(NAME_TIMEFIELD).withConfigProperty(NAME_KEYFIELD);
     }
 
-    if (!containsMacro(NAME_CLUSTER_API_KEY) && Strings.isNullOrEmpty(clusterApiKey)) {
+    /*if (!containsMacro(NAME_CLUSTER_API_KEY) && Strings.isNullOrEmpty(clusterApiKey)) {
       collector.addFailure("Cluster API Key must be provided.", null)
         .withConfigProperty(NAME_CLUSTER_API_KEY);
     }
@@ -577,7 +565,7 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
     if (!containsMacro(NAME_CLUSTER_API_SECRET) && Strings.isNullOrEmpty(clusterApiSecret)) {
       collector.addFailure("Cluster API Secret must be provided.", null)
         .withConfigProperty(NAME_CLUSTER_API_SECRET);
-    }
+    }*/
 
     if (!Strings.isNullOrEmpty(schemaRegistryUrl)) {
       if (!Strings.isNullOrEmpty(format)) {
@@ -585,14 +573,14 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
           .withConfigProperty(NAME_SR_URL)
           .withConfigProperty(NAME_FORMAT);
       }
-      if (!containsMacro(NAME_SR_API_KEY) && Strings.isNullOrEmpty(clusterApiKey)) {
+      /*if (!containsMacro(NAME_SR_API_KEY) && Strings.isNullOrEmpty(clusterApiKey)) {
         collector.addFailure("Schema Registry API Key must be provided.", null)
           .withConfigProperty(NAME_SR_API_KEY);
       }
       if (!containsMacro(NAME_SR_API_SECRET) && Strings.isNullOrEmpty(clusterApiSecret)) {
         collector.addFailure("Schema Registry API Secret must be provided.", null)
           .withConfigProperty(NAME_SR_API_SECRET);
-      }
+      }*/
       if (!containsMacro(NAME_VALUE_FIELD) && Strings.isNullOrEmpty(valueField)) {
         collector.addFailure("Message Field should be provided when Schema Registry is used.", null)
           .withConfigProperty(NAME_VALUE_FIELD);

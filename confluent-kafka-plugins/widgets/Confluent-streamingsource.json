@@ -100,21 +100,6 @@
       ]
     },
     {
-      "label": "Authentication",
-      "properties": [
-        {
-          "widget-type": "textbox",
-          "label": "Cluster API Key",
-          "name": "clusterApiKey"
-        },
-        {
-          "widget-type": "textbox",
-          "label": "Cluster API Secret",
-          "name": "clusterApiSecret"
-        }
-      ]
-    },
-    {
       "label": "Schema Registry",
       "properties": [
         {
