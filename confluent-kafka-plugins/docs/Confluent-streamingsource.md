@@ -59,9 +59,9 @@ If no format is given, Kafka message payloads will be treated as bytes.
 
 **Additional Kafka Consumer Properties:** Additional Kafka consumer properties to set.
 
-**Cluster API Key:** The Confluent API Key used for the source.
+**Cluster API Key:** The Confluent API Key used for the source. Required if connecting with Confluent Cloud.
 
-**Cluster API Secret:** The Confluent API Secret used for the source.
+**Cluster API Secret:** The Confluent API Secret used for the source. Required if connecting with Confluent Cloud.
 
 **Schema Registry URL:** The Schema Registry endpoint URL.
 

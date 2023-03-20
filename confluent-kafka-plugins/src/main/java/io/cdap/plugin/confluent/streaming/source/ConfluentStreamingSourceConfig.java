@@ -166,13 +166,15 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
   private final String kafkaProperties;
 
   @Name(NAME_CLUSTER_API_KEY)
-  @Description("The Confluent API Key.")
+  @Description("The Confluent API Key. Required if connecting with Confluent Cloud.")
   @Macro
+  @Nullable
   private final String clusterApiKey;
 
   @Name(NAME_CLUSTER_API_SECRET)
-  @Description("The Confluent API Secret.")
+  @Description("The Confluent API Secret. Required if connecting with Confluent Cloud.")
   @Macro
+  @Nullable
   private final String clusterApiSecret;
 
   @Name(NAME_SR_URL)
@@ -574,14 +576,16 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
         .withConfigProperty(NAME_TIMEFIELD).withConfigProperty(NAME_KEYFIELD);
     }
 
-    if (!containsMacro(NAME_CLUSTER_API_KEY) && Strings.isNullOrEmpty(clusterApiKey)) {
-      collector.addFailure("Cluster API Key must be provided.", null)
-        .withConfigProperty(NAME_CLUSTER_API_KEY);
+    if (!containsMacro(NAME_CLUSTER_API_KEY) && !Strings.isNullOrEmpty(clusterApiKey) &&
+      Strings.isNullOrEmpty(clusterApiSecret)) {
+      collector.addFailure("Cluster API Secret should be provided when Cluster API Key is used.", null)
+        .withConfigProperty(ConfluentStreamingSourceConfig.NAME_CLUSTER_API_SECRET);
     }
 
-    if (!containsMacro(NAME_CLUSTER_API_SECRET) && Strings.isNullOrEmpty(clusterApiSecret)) {
-      collector.addFailure("Cluster API Secret must be provided.", null)
-        .withConfigProperty(NAME_CLUSTER_API_SECRET);
+    if (!containsMacro(NAME_CLUSTER_API_SECRET) && !Strings.isNullOrEmpty(clusterApiSecret) &&
+      Strings.isNullOrEmpty(clusterApiKey)) {
+      collector.addFailure("Cluster API Key should be provided when Cluster API Secret is used.", null)
+        .withConfigProperty(ConfluentStreamingSourceConfig.NAME_CLUSTER_API_KEY);
     }
 
     if (!Strings.isNullOrEmpty(schemaRegistryUrl)) {
