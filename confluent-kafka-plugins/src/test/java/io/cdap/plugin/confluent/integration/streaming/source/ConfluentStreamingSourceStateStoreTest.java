@@ -55,7 +55,7 @@ import io.cdap.plugin.confluent.streaming.source.ConfluentStreamingSourceConfig;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.requests.ListOffsetRequest;
+import org.apache.kafka.common.requests.ListOffsetsRequest;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.spark.streaming.kafka010.KafkaUtils;
@@ -210,7 +210,7 @@ public class ConfluentStreamingSourceStateStoreTest extends HydratorTestBase {
     properties.put(ConfluentStreamingSourceConfig.NAME_BROKERS, KafkaTestUtils.KAFKA_SERVER);
     properties.put(ConfluentStreamingSourceConfig.NAME_TOPIC, TOPIC_NAME);
     properties.put(ConfluentStreamingSourceConfig.NAME_DEFAULT_INITIAL_OFFSET,
-                   String.valueOf(ListOffsetRequest.EARLIEST_TIMESTAMP));
+                   String.valueOf(ListOffsetsRequest.EARLIEST_TIMESTAMP));
     properties.put(ConfluentStreamingSourceConfig.NAME_CLUSTER_API_KEY, KafkaTestUtils.CLUSTER_API_KEY);
     properties.put(ConfluentStreamingSourceConfig.NAME_CLUSTER_API_SECRET, KafkaTestUtils.CLUSTER_API_SECRET);
     properties.put(ConfluentStreamingSourceConfig.NAME_SCHEMA, schema.toString());

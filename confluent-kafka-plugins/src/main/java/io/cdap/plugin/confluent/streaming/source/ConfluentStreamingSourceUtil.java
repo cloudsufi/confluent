@@ -16,6 +16,11 @@
 
 package io.cdap.plugin.confluent.streaming.source;
 
+import com.google.auth.oauth2.GoogleCredentials;
+import com.google.cloud.ServiceOptions;
+import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
@@ -44,7 +49,7 @@ import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.config.SslConfigs;
-import org.apache.kafka.common.requests.ListOffsetRequest;
+import org.apache.kafka.common.requests.ListOffsetsRequest;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
@@ -66,6 +71,9 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -76,6 +84,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -89,6 +98,7 @@ import javax.annotation.Nonnull;
 final class ConfluentStreamingSourceUtil {
   private static final Logger LOG = LoggerFactory.getLogger(ConfluentStreamingSourceUtil.class);
   private static final Gson gson = new Gson();
+  private static final String AUTO_DETECT = "auto-detect";
 
   private ConfluentStreamingSourceUtil() {
     // no-op
@@ -104,7 +114,7 @@ final class ConfluentStreamingSourceUtil {
    */
   static <K, V> JavaInputDStream<ConsumerRecord<K, V>> getConsumerRecordJavaDStream(
     StreamingContext context, ConfluentStreamingSourceConfig conf, FailureCollector collector,
-    Supplier<Map<TopicPartition, Long>> stateSupplier) {
+    Supplier<Map<TopicPartition, Long>> stateSupplier) throws IOException {
     String pipelineName = context.getPipelineName();
     Map<String, Object> kafkaParams = getConsumerParams(conf, pipelineName);
     Properties properties = new Properties();
@@ -130,7 +140,7 @@ final class ConfluentStreamingSourceUtil {
    * @param collector failure collector
    */
   static JavaDStream<StructuredRecord> getStructuredRecordJavaDStream(StreamingContext context,
-    ConfluentStreamingSourceConfig conf, Schema outputSchema, FailureCollector collector) {
+    ConfluentStreamingSourceConfig conf, Schema outputSchema, FailureCollector collector) throws IOException {
     JavaInputDStream<ConsumerRecord<Object, Object>> javaInputDStream = getConsumerRecordJavaDStream(context, conf,
       collector, getStateSupplier(context, conf));
 
@@ -208,17 +218,104 @@ final class ConfluentStreamingSourceUtil {
     }
   }
 
+  /**
+   * Downloads the X509 certificate at the temp of the local environment from the given GCS path.
+   *
+   * @return temp path of the downloaded X509 certificate.
+   * @throws IOException any IO errors
+   */
+  private static Path downloadAndGetLocalCertPath(String gcsCertPath) throws IOException {
+    String gcpProjectId = "cdf-entcon";
+    GCSPath gcsPathObj = GCSPath.from(gcsCertPath);
+    String bucketName = gcsPathObj.getBucket();
+    String bucketFilePath = gcsPathObj.getName();
+
+    StorageOptions options = StorageOptions.newBuilder()
+      .setProjectId(getProjectId(gcpProjectId))
+      .setCredentials(GoogleCredentials.getApplicationDefault())
+      .build();
+
+    Storage storage = options.getService();
+    Blob x509Blob = storage.get(bucketName, bucketFilePath);
+
+    if (x509Blob == null) {
+      throw new IllegalArgumentException(String.format(
+        "Confluent Platofrm MDS store file (%s) is missing. Please make sure the required store file is"
+          + " uploaded to your specified Google Cloud Storage bucket '%s'.", gcsCertPath, bucketName));
+    }
+
+    Path localTempDirPath = Files.createTempDirectory("_confluent.store");
+    Path path = Paths.get(localTempDirPath.toString(), UUID.randomUUID().toString());
+    x509Blob.downloadTo(path);
+
+    return path;
+  }
+
+  /**
+   * Used to return the default GCP 'Project Id' in case the given string is 'auto-detect'
+   * otherwise returns the given string.
+   *
+   * @param gcpProjectId contains the actual GCP project id. Default value: auto-detect.
+   * @return in case of 'auto-detect default GCP 'Project Id' otherwise same value is returned
+   */
+  private static String getProjectId(String gcpProjectId) {
+    if (AUTO_DETECT.equals(gcpProjectId)) {
+      return ServiceOptions.getDefaultProjectId();
+    }
+    return gcpProjectId;
+  }
+
   @Nonnull
-  private static Map<String, Object> getConsumerParams(ConfluentStreamingSourceConfig conf, String pipelineName) {
+  private static Map<String, Object> getConsumerParams(ConfluentStreamingSourceConfig conf, String pipelineName)
+    throws IOException {
+    /*File trustStoreFile = FileUtils.getFile("classpath:src/main/resources/kafka.mds.truststore.jks");
+    File keyStoreFile = FileUtils.getFile("classpath:src/main/resources/kafka.mds.keystore.jks");*/
+
+    /*String trustStoreFile = Thread.currentThread().getContextClassLoader()
+      .getResource("kafka.mds.truststore.jks").getPath();
+    String keyStoreFile = Thread.currentThread().getContextClassLoader()
+      .getResource("kafka.mds.keystore.jks").getPath();*/
+
+    /*Path trustStoreFilePath = downloadAndGetLocalCertPath(
+      "gs://confluent-platform/kafka.mds.truststore.jks");
+    Path keyStoreFilePath = downloadAndGetLocalCertPath("gs://confluent-platform/kafka.mds.keystore.jks");*/
+
+
     Map<String, Object> kafkaParams = new HashMap<>();
     kafkaParams.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, conf.getBrokers());
     // Spark saves the offsets in checkpoints, no need for Kafka to save them
     kafkaParams.put(SslConfigs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG, "https");
     kafkaParams.put(CommonClientConfigs.RETRY_BACKOFF_MS_CONFIG, "500");
-    kafkaParams.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_SSL");
-    kafkaParams.put(SaslConfigs.SASL_MECHANISM, "PLAIN");
-    kafkaParams.put(SaslConfigs.SASL_JAAS_CONFIG, "org.apache.kafka.common.security.plain.PlainLoginModule required " +
-      "username=\"" + conf.getClusterApiKey() + "\" password=\"" + conf.getClusterApiSecret() + "\";");
+
+    if (Strings.isNullOrEmpty(conf.getClusterApiKey()) && Strings.isNullOrEmpty(conf.getClusterApiSecret())) {
+      LOG.info("ClusterApiKey AND ClusterApiSecret are empty");
+      /***************************** PLAINTEXT *********************************/
+      //kafkaParams.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "PLAINTEXT");
+
+      /***************************** SSL *********************************/
+      /*kafkaParams.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SSL");
+      *//*kafkaParams.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG,
+         "/Users/sanchitgarg/workspace/cloudsufi/confluent/confluent-kafka-plugins/src/main/resources/" +
+           "kafka.mds.truststore.jks");*//*
+      kafkaParams.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG,
+                      trustStoreFilePath);
+      kafkaParams.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, "confluent");
+      *//*kafkaParams.put(SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG,
+        "/Users/sanchitgarg/workspace/cloudsufi/confluent/confluent-kafka-plugins/src/main/resources/" +
+          "kafka.mds.keystore.jks");*//*
+      kafkaParams.put(SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG,
+                      keyStoreFilePath);
+      kafkaParams.put(SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG, "confluent");
+      kafkaParams.put(SslConfigs.SSL_KEY_PASSWORD_CONFIG, "confluent");*/
+    } else {
+      LOG.info("ClusterApiKey AND ClusterApiSecret are NOT empty");
+      
+      /***************************** SASL *********************************/
+      kafkaParams.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_SSL");
+      kafkaParams.put(SaslConfigs.SASL_MECHANISM, "PLAIN");
+      kafkaParams.put(SaslConfigs.SASL_JAAS_CONFIG, "org.apache.kafka.common.security.plain.PlainLoginModule required "
+        + "username=\"" + conf.getClusterApiKey() + "\" password=\"" + conf.getClusterApiSecret() + "\";");
+    }
 
     if (!Strings.isNullOrEmpty(conf.getSchemaRegistryUrl())) {
       kafkaParams.put("schema.registry.url", conf.getSchemaRegistryUrl());
@@ -268,9 +365,9 @@ final class ConfluentStreamingSourceUtil {
     for (Map.Entry<TopicPartition, Long> entry : offsets.entrySet()) {
       TopicPartition topicAndPartition = entry.getKey();
       Long offset = entry.getValue();
-      if (offset == ListOffsetRequest.EARLIEST_TIMESTAMP) {
+      if (offset == ListOffsetsRequest.EARLIEST_TIMESTAMP) {
         earliestOffsetRequest.add(topicAndPartition);
-      } else if (offset == ListOffsetRequest.LATEST_TIMESTAMP) {
+      } else if (offset == ListOffsetsRequest.LATEST_TIMESTAMP) {
         latestOffsetRequest.add(topicAndPartition);
       }
     }
