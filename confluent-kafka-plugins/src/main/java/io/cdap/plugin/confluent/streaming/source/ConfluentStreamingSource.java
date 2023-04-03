@@ -86,6 +86,8 @@ public class ConfluentStreamingSource extends StreamingSource<StructuredRecord> 
   }
 
   private Schema getOutputSchema(FailureCollector failureCollector) {
+    /*if (conf.getSchemaRegistryUrl() == null || conf.getSchemaRegistryApiKey() == null ||
+      conf.getSchemaRegistryApiSecret() == null) {*/
     if (conf.getSchemaRegistryUrl() == null) {
       return conf.getSchema(failureCollector);
     }

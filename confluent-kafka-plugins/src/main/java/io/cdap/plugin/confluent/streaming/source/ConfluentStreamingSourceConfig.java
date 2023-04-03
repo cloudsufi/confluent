@@ -168,11 +168,13 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
   @Name(NAME_CLUSTER_API_KEY)
   @Description("The Confluent API Key.")
   @Macro
+  @Nullable
   private final String clusterApiKey;
 
   @Name(NAME_CLUSTER_API_SECRET)
   @Description("The Confluent API Secret.")
   @Macro
+  @Nullable
   private final String clusterApiSecret;
 
   @Name(NAME_SR_URL)
@@ -574,7 +576,7 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
         .withConfigProperty(NAME_TIMEFIELD).withConfigProperty(NAME_KEYFIELD);
     }
 
-    if (!containsMacro(NAME_CLUSTER_API_KEY) && Strings.isNullOrEmpty(clusterApiKey)) {
+    /*if (!containsMacro(NAME_CLUSTER_API_KEY) && Strings.isNullOrEmpty(clusterApiKey)) {
       collector.addFailure("Cluster API Key must be provided.", null)
         .withConfigProperty(NAME_CLUSTER_API_KEY);
     }
@@ -582,7 +584,7 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
     if (!containsMacro(NAME_CLUSTER_API_SECRET) && Strings.isNullOrEmpty(clusterApiSecret)) {
       collector.addFailure("Cluster API Secret must be provided.", null)
         .withConfigProperty(NAME_CLUSTER_API_SECRET);
-    }
+    }*/
 
     if (!Strings.isNullOrEmpty(schemaRegistryUrl)) {
       if (!Strings.isNullOrEmpty(format)) {
@@ -590,14 +592,14 @@ public class ConfluentStreamingSourceConfig extends ReferencePluginConfig implem
           .withConfigProperty(NAME_SR_URL)
           .withConfigProperty(NAME_FORMAT);
       }
-      if (!containsMacro(NAME_SR_API_KEY) && Strings.isNullOrEmpty(clusterApiKey)) {
+      /*if (!containsMacro(NAME_SR_API_KEY) && Strings.isNullOrEmpty(schemaRegistryApiKey)) {
         collector.addFailure("Schema Registry API Key must be provided.", null)
           .withConfigProperty(NAME_SR_API_KEY);
       }
-      if (!containsMacro(NAME_SR_API_SECRET) && Strings.isNullOrEmpty(clusterApiSecret)) {
+      if (!containsMacro(NAME_SR_API_SECRET) && Strings.isNullOrEmpty(schemaRegistryApiSecret)) {
         collector.addFailure("Schema Registry API Secret must be provided.", null)
           .withConfigProperty(NAME_SR_API_SECRET);
-      }
+      }*/
       if (!containsMacro(NAME_VALUE_SCHEMA) && Strings.isNullOrEmpty(valueSchema)) {
         collector.addFailure("Message Value Schema should be provided when Schema Registry is used.", null)
           .withConfigProperty(NAME_VALUE_SCHEMA);

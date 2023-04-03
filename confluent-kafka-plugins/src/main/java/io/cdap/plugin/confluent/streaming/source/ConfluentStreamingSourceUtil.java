@@ -215,11 +215,13 @@ final class ConfluentStreamingSourceUtil {
     // Spark saves the offsets in checkpoints, no need for Kafka to save them
     kafkaParams.put(SslConfigs.SSL_ENDPOINT_IDENTIFICATION_ALGORITHM_CONFIG, "https");
     kafkaParams.put(CommonClientConfigs.RETRY_BACKOFF_MS_CONFIG, "500");
-    kafkaParams.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_SSL");
-    kafkaParams.put(SaslConfigs.SASL_MECHANISM, "PLAIN");
-    kafkaParams.put(SaslConfigs.SASL_JAAS_CONFIG, "org.apache.kafka.common.security.plain.PlainLoginModule required " +
-      "username=\"" + conf.getClusterApiKey() + "\" password=\"" + conf.getClusterApiSecret() + "\";");
 
+    if (!Strings.isNullOrEmpty(conf.getClusterApiKey()) || !Strings.isNullOrEmpty(conf.getClusterApiSecret())) {
+      kafkaParams.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_SSL");
+      kafkaParams.put(SaslConfigs.SASL_MECHANISM, "PLAIN");
+      kafkaParams.put(SaslConfigs.SASL_JAAS_CONFIG, "org.apache.kafka.common.security.plain.PlainLoginModule required "
+        + "username=\"" + conf.getClusterApiKey() + "\" password=\"" + conf.getClusterApiSecret() + "\";");
+    }
     if (!Strings.isNullOrEmpty(conf.getSchemaRegistryUrl())) {
       kafkaParams.put("schema.registry.url", conf.getSchemaRegistryUrl());
       kafkaParams.put("basic.auth.credentials.source", "USER_INFO");
