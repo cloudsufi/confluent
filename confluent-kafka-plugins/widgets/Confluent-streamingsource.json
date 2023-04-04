@@ -135,7 +135,7 @@
         {
           "widget-type": "textbox",
           "label": "Value Schema",
-          "name": "valueSchema",
+          "name": "valueField",
           "plugin-function": {
             "label": "Get Schema",
             "widget": "outputSchema",
