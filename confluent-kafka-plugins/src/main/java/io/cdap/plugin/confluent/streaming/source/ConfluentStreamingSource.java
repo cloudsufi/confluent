@@ -110,14 +110,14 @@ public class ConfluentStreamingSource extends StreamingSource<StructuredRecord> 
       }
       if (messageSchemaShouldBeAdded) {
         Schema valueSchema = fetchSchema(schemaRegistryClient, conf.getTopic() + "-value");
-        if (valueSchema.getRecordName().equals(conf.getvalueField())) {
+        //if (valueSchema.getRecordName().equals(conf.getvalueField())) {
           newFields.add(Schema.Field.of(conf.getvalueField(), valueSchema));
-        } else {
+        /*} else {
           failureCollector.addFailure(String.format("Invalid value schema name '%s'.", conf.getvalueField()),
                                       null)
             .withConfigProperty(ConfluentStreamingSourceConfig.NAME_VALUE_FIELD);
           throw failureCollector.getOrThrowException();
-        }
+        }*/
       }
       return Schema.recordOf(ConfluentStreamingSourceConfig.NAME_OUTPUT, newFields);
     } catch (IOException | RestClientException e) {
