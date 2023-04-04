@@ -416,13 +416,13 @@ final class ConfluentStreamingSourceUtil {
       if (offsetField != null) {
         builder.set(offsetField, in.offset());
       }
-      addMessage(builder, in.value());
+      addMessage(builder, in.value(), outputSchema);
       return builder.build();
     }
 
     protected abstract Object convertKey(K key);
 
-    protected abstract void addMessage(StructuredRecord.Builder builder, V message) throws Exception;
+    protected abstract void addMessage(StructuredRecord.Builder builder, V message, Schema schema) throws Exception;
   }
 
   private abstract static class BinaryBaseFunction extends BaseFunction<Object, Object> {
@@ -459,7 +459,7 @@ final class ConfluentStreamingSourceUtil {
     }
 
     @Override
-    protected void addMessage(StructuredRecord.Builder builder, Object message) {
+    protected void addMessage(StructuredRecord.Builder builder, Object message, Schema schema) {
       builder.set(getMessageField(), message);
     }
 
@@ -493,7 +493,7 @@ final class ConfluentStreamingSourceUtil {
     }
 
     @Override
-    protected void addMessage(StructuredRecord.Builder builder, Object message) throws Exception {
+    protected void addMessage(StructuredRecord.Builder builder, Object message, Schema schema) throws Exception {
       // first time this was called, initialize record format
       if (recordFormat == null) {
         Schema messageSchema = conf.getMessageSchema();
@@ -522,7 +522,7 @@ final class ConfluentStreamingSourceUtil {
     }
 
     @Override
-    protected void addMessage(StructuredRecord.Builder builder, Object message) throws Exception {
+    protected void addMessage(StructuredRecord.Builder builder, Object message, Schema schema) throws Exception {
       if (transformer == null) {
         transformer = new AvroToStructuredTransformer();
       }
@@ -532,7 +532,9 @@ final class ConfluentStreamingSourceUtil {
       }
       GenericRecord genericRecord = (GenericRecord) message;
       StructuredRecord messageRecord = transformer.transform(genericRecord);
-      builder.set(conf.getvalueSchema(), messageRecord);
+      //builder.set(conf.getvalueSchema(), messageRecord);
+      builder.set(schema.getFields().get(0).getName(), messageRecord);
+
     }
   }
 }
