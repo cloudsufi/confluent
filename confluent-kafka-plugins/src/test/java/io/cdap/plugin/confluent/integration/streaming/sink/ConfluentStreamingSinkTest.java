@@ -170,7 +170,7 @@ public class ConfluentStreamingSinkTest extends ConfluentStreamingTestBase {
     String keyField = "key";
     String partitionField = "partition";
 
-    Schema valueSchema = Schema.recordOf(
+    Schema valueField = Schema.recordOf(
       "user",
       Schema.Field.of("id", Schema.of(Schema.Type.LONG)),
       Schema.Field.of("first", Schema.of(Schema.Type.STRING)),
@@ -178,21 +178,21 @@ public class ConfluentStreamingSinkTest extends ConfluentStreamingTestBase {
     );
     Schema schema = Schema.recordOf(
       "confluent",
-      Schema.Field.of(messageField, valueSchema),
+      Schema.Field.of(messageField, valueField),
       Schema.Field.of(keyField, Schema.nullableOf(Schema.of(Schema.Type.STRING))),
       Schema.Field.of(partitionField, Schema.of(Schema.Type.INT))
     );
-    StructuredRecord value1 = StructuredRecord.builder(valueSchema)
+    StructuredRecord value1 = StructuredRecord.builder(valueField)
       .set("id", 1L)
       .set("first", "samuel")
       .set("last", "jackson")
       .build();
-    StructuredRecord value2 = StructuredRecord.builder(valueSchema)
+    StructuredRecord value2 = StructuredRecord.builder(valueField)
       .set("id", 2L)
       .set("first", "dwayne")
       .set("last", "johnson")
       .build();
-    StructuredRecord value3 = StructuredRecord.builder(valueSchema)
+    StructuredRecord value3 = StructuredRecord.builder(valueField)
       .set("id", 3L)
       .set("first", "christopher")
       .set("last", "walken")

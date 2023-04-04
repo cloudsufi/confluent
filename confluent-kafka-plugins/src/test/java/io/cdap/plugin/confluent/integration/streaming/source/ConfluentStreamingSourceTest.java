@@ -301,7 +301,7 @@ public class ConfluentStreamingSourceTest extends ConfluentStreamingTestBase {
     properties.put(ConfluentStreamingSourceConfig.NAME_SR_URL, KafkaTestUtils.SR_URL);
     properties.put(ConfluentStreamingSourceConfig.NAME_SR_API_KEY, KafkaTestUtils.SR_API_KEY);
     properties.put(ConfluentStreamingSourceConfig.NAME_SR_API_SECRET, KafkaTestUtils.SR_API_SECRET);
-    properties.put(ConfluentStreamingSourceConfig.NAME_VALUE_SCHEMA, messageField);
+    properties.put(ConfluentStreamingSourceConfig.NAME_VALUE_FIELD, messageField);
     properties.put(ConfluentStreamingSourceConfig.NAME_KEYFIELD, keyField);
     properties.put(ConfluentStreamingSourceConfig.NAME_TIMEFIELD, timeField);
     properties.put(ConfluentStreamingSourceConfig.NAME_PARTITION_FIELD, partitionField);
@@ -364,7 +364,7 @@ public class ConfluentStreamingSourceTest extends ConfluentStreamingTestBase {
   @Test
   public void testConfluentStreamingSourceWithSchemaRegistry() throws Exception {
     String messageField = "message";
-    Schema valueSchema = Schema.recordOf(
+    Schema valueField = Schema.recordOf(
       "user",
       Schema.Field.of("id", Schema.of(Schema.Type.LONG)),
       Schema.Field.of("first", Schema.of(Schema.Type.STRING)),
@@ -372,34 +372,34 @@ public class ConfluentStreamingSourceTest extends ConfluentStreamingTestBase {
     );
     Schema schema = Schema.recordOf(
       "confluent",
-      Schema.Field.of(messageField, valueSchema)
+      Schema.Field.of(messageField, valueField)
     );
     Map<String, String> properties = getConfigProperties(schema);
     properties.put(ConfluentStreamingSourceConfig.NAME_SR_URL, KafkaTestUtils.SR_URL);
     properties.put(ConfluentStreamingSourceConfig.NAME_SR_API_KEY, KafkaTestUtils.SR_API_KEY);
     properties.put(ConfluentStreamingSourceConfig.NAME_SR_API_SECRET, KafkaTestUtils.SR_API_SECRET);
-    properties.put(ConfluentStreamingSourceConfig.NAME_VALUE_SCHEMA, messageField);
+    properties.put(ConfluentStreamingSourceConfig.NAME_VALUE_FIELD, messageField);
     programManager = deploySourcePlugin(properties);
     programManager.startAndWaitForRun(ProgramRunStatus.RUNNING, 10, TimeUnit.SECONDS);
 
     List<StructuredRecord> records = Arrays.asList(
-      StructuredRecord.builder(valueSchema)
+      StructuredRecord.builder(valueField)
         .set("id", 1L)
         .set("first", "samuel")
         .set("last", "jackson")
         .build(),
-      StructuredRecord.builder(valueSchema)
+      StructuredRecord.builder(valueField)
         .set("id", 2L)
         .set("first", "dwayne")
         .set("last", "johnson")
         .build(),
-      StructuredRecord.builder(valueSchema)
+      StructuredRecord.builder(valueField)
         .set("id", 3L)
         .set("first", "christopher")
         .set("last", "walken")
         .build()
     );
-    List<GenericRecord> genericRecords = KafkaTestUtils.toGenericRecords(records, valueSchema);
+    List<GenericRecord> genericRecords = KafkaTestUtils.toGenericRecords(records, valueField);
     for (GenericRecord genericRecord : genericRecords) {
       sendKafkaAvroMessage(topic, 0, null, genericRecord);
     }

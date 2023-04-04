@@ -103,19 +103,19 @@ public class ConfluentStreamingSource extends StreamingSource<StructuredRecord> 
         new CachedSchemaRegistryClient(conf.getSchemaRegistryUrl(), 2, options);
       List<Schema.Field> newFields = new ArrayList<>();
       boolean keySchemaShouldBeAdded = conf.getKeyField() != null;
-      boolean messageSchemaShouldBeAdded = conf.getvalueSchema() != null;
+      boolean messageSchemaShouldBeAdded = conf.getvalueField() != null;
       if (keySchemaShouldBeAdded) {
         Schema keySchema = fetchSchema(schemaRegistryClient, conf.getTopic() + "-key");
         newFields.add(Schema.Field.of(conf.getKeyField(), keySchema));
       }
       if (messageSchemaShouldBeAdded) {
-        Schema valueSchema = fetchSchema(schemaRegistryClient, conf.getTopic() + "-value");
-        //if (valueSchema.getRecordName().equals(conf.getvalueSchema())) {
-          newFields.add(Schema.Field.of(valueSchema.getRecordName(), valueSchema));
+        Schema valueField = fetchSchema(schemaRegistryClient, conf.getTopic() + "-value");
+        //if (valueField.getRecordName().equals(conf.getvalueField())) {
+          newFields.add(Schema.Field.of(valueField.getRecordName(), valueField));
         /*} else {
-          failureCollector.addFailure(String.format("Invalid value schema name '%s'.", conf.getvalueSchema()),
+          failureCollector.addFailure(String.format("Invalid value schema name '%s'.", conf.getvalueField()),
                                       null)
-            .withConfigProperty(ConfluentStreamingSourceConfig.NAME_VALUE_SCHEMA);
+            .withConfigProperty(ConfluentStreamingSourceConfig.NAME_VALUE_FIELD);
           throw failureCollector.getOrThrowException();
         }*/
       }
